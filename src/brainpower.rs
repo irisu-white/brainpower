@@ -16,7 +16,12 @@ pub struct BrainPower {
 
 impl BrainPower {
     pub fn new(inst: &str) -> BrainPower {
-        let s: Vec<char> = inst.chars().filter(|c| match c {
+        let start = match inst.find("Let the bass kick!") {
+            Some(idx) => idx + 18,  // len("Let the bass kick!")
+            None => inst.len(),     // goto end of inst-string
+        };
+
+        let s: Vec<char> = inst.chars().skip(start).filter(|c| match c {
             'A' | 'E' | 'e' | 'I' | 'O' | 'o' | 'U' | 'J' => true,
             _ => false,
         }).collect();
@@ -54,7 +59,7 @@ impl BrainPower {
                 'o' => {
                     // max size of array is 0x7500 (29952)
                     if (self.sp + 1) >= 0x7500 {
-                        panic!("Fuck: stack out of range (max 0x7500)");
+                        panic!("BrainPower: stack out of range (max 0x7500)");
                     }
                     // extend array
                     if (self.sp + 1) >= self.array.len() {
@@ -66,7 +71,7 @@ impl BrainPower {
                 'A' => {
                     // bound check
                     if self.sp == 0 {
-                        panic!("Fuck: stack less then zero at {}", self.pc);
+                        panic!("BrainPower: stack less then zero at {}", self.pc);
                     }
                     self.sp -= 1;
                 },
@@ -81,28 +86,28 @@ impl BrainPower {
                 // Output
                 'I' => {
                     let s: u8 = self.array[self.sp] as u8;
-                    output.write(&[s]).expect("Fuck: output error");
+                    output.write(&[s]).expect("BrainPower: output error");
                 },
                 // Input
                 'J' => {
                     let mut s: [u8; 1] = [0];
-                    input.read(&mut s).expect("Fuck: input error");
+                    input.read(&mut s).expect("BrainPower: input error");
                     self.array[self.sp] = s[0] as i8;
                 },
                 // Loop begin
                 'O' => {
                     if self.array[self.sp] == 0 {
                         if self.pc + 1 >= stop {
-                            panic!("Fuck: invalid '[' at {}", self.pc);
+                            panic!("BrainPower: invalid 'O' at {}", self.pc);
                         }
-                        // find forward ']'
+                        // find forward 'U'
                         let mut count: i32 = 1;
                         for i in (self.pc + 1)..stop {
                             let c = self.instruction[i];
-                            if c == '[' {
+                            if c == 'O' {
                                 count += 1
                             }
-                            else if c == ']' {
+                            else if c == 'U' {
                                 count -= 1;
                                 if count == 0 {
                                     if cfg!(debug_assertions) {
@@ -115,7 +120,7 @@ impl BrainPower {
                         }
                         // not found
                         if count != 0 {
-                            panic!("Fuck: invalid '[' at {}", self.pc);
+                            panic!("BrainPower: invalid 'O' at {}", self.pc);
                         }
                     }
                 },
@@ -123,13 +128,13 @@ impl BrainPower {
                 'U' => {
                     if self.array[self.sp] != 0 {
                         if self.pc == 0 {
-                            panic!("Fuck: invalid ']' at 0");
+                            panic!("BrainPower: invalid 'U' at 0");
                         }
-                        // find back '['
+                        // find back 'O'
                         let mut count: i32 = 1;
                         for i in (0..(self.pc - 1)).rev() {
                             let c = self.instruction[i];
-                            if c == '[' {
+                            if c == 'O' {
                                 count -= 1;
                                 if count == 0 {
                                     if cfg!(debug_assertions) {
@@ -139,17 +144,17 @@ impl BrainPower {
                                     break;
                                 }
                             }
-                            else if c == ']' {
+                            else if c == 'U' {
                                 count += 1;
                             }
                         }
                         if count != 0 {
-                            panic!("Fuck: invalid ']' at {}", self.pc);
+                            panic!("BrainPower: invalid 'U' at {}", self.pc);
                         }
                     }
                 },
                 s => {
-                    panic!("Fuck: Unknown char {} at {}", s, self.pc);
+                    panic!("BrainPower: Unknown char {} at {}", s, self.pc);
                 }
             }
 
